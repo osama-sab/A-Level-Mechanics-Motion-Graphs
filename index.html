@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Motion graphs, stages and gravity</title>
+<meta name="description" content="Interactive kinematics for Edexcel A level Mechanics: motion graphs, slope and area, solving in stages, and vertical motion under gravity.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FAFAF8; --panel:#FFFFFF; --panel2:#F3F4F1; --line:#D8DEE4; --grid:#E4E8EC;
+  --text:#1C2128; --muted:#57606A; --primary:#0969DA; --accent:#BC4C00; --fourth:#8250DF; --ok:#1A7F37;
+  --danger:#CF222E; --on-primary:#FFFFFF;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1117; --panel:#161B22; --panel2:#0D1117; --line:#30363D; --grid:#21262D;
+    --text:#E6EDF3; --muted:#8B949E; --primary:#58A6FF; --accent:#FFA657; --fourth:#D2A8FF; --ok:#7EE787;
+    --danger:#F85149; --on-primary:#0D1117; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1117; --panel:#161B22; --panel2:#0D1117; --line:#30363D; --grid:#21262D;
+  --text:#E6EDF3; --muted:#8B949E; --primary:#58A6FF; --accent:#FFA657; --fourth:#D2A8FF; --ok:#7EE787;
+  --danger:#F85149; --on-primary:#0D1117; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+math{font-family:"Latin Modern Math","STIX Two Math","Cambria Math",math;font-size:1.08em}
+.wrap{max-width:1200px;margin:0 auto;padding:26px 20px 56px}
+h1{font-size:26px;font-weight:600;letter-spacing:-0.01em;margin:0 0 2px}
+h2{font-size:19px;font-weight:600;margin:30px 0 4px}
+.sub{margin:0 0 16px;color:var(--muted)}
+.lead{margin:0 0 14px;color:var(--muted);max-width:820px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+canvas{display:block;width:100%;height:100%}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto}
+.tabs a{padding:10px 16px;color:var(--muted);text-decoration:none;font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs a:hover{color:var(--text)}
+.tabs a[aria-current="page"]{color:var(--text);border-bottom-color:var(--primary)}
+.view[hidden]{display:none}
+.btn{height:40px;padding:0 16px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--muted)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--primary);border-color:transparent;color:var(--on-primary)}
+input[type=range]{accent-color:var(--primary);height:28px;margin:0;cursor:pointer;min-width:0}
+.tnum{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13.5px;white-space:nowrap}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;align-items:center;gap:14px;padding:10px 14px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+.bar input{flex:1}
+.scrollx{overflow-x:auto;padding-bottom:4px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;min-width:720px}
+.ghd{padding:4px 4px 0}
+.ghd b{display:block;font-weight:600}
+.ghd span{color:var(--muted);font-size:13.5px}
+.track{height:54px}
+.cell{overflow:hidden}
+.cell .cv{height:168px}
+.cap{border-top:1px solid var(--line);padding:6px 10px;min-height:58px;font-size:13.5px;color:var(--text)}
+.cap div{white-space:nowrap;overflow-x:auto}
+.key{display:flex;gap:22px;flex-wrap:wrap;color:var(--muted);font-size:13.5px;margin:0 0 12px}
+.key i{display:inline-block;width:22px;height:12px;vertical-align:-1px;margin-right:7px;border-radius:2px}
+.key .sl{border-top:2px dashed var(--text);height:0;vertical-align:4px;border-radius:0}
+.key .ar{background:color-mix(in srgb,var(--accent) 35%,transparent)}
+.seg{display:inline-flex;max-width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel2);margin:6px 0 14px}
+.seg button{height:38px;padding:0 16px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:14px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--primary);color:var(--on-primary);font-weight:500}
+.deck{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:14px;align-items:start}
+.deck[hidden]{display:none}
+.dk-vis{overflow:hidden}
+.dk-cv{height:380px}
+.dk-ctrl{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+.dk-ctrl[hidden]{display:none}
+.dk-ctrl input{flex:1}
+.dk-ctrl .btn{height:34px;padding:0 14px}
+.mcv{height:620px}
+.mtext{min-height:0}
+.mtext p{margin:0 0 16px}
+.mk{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:-1px}
+.mk-s{background:var(--primary)}.mk-v{background:var(--accent)}.mk-a{background:var(--fourth)}
+@media (max-width:900px){.mcv{height:560px}}
+.dk-ctrl output{font-variant-numeric:tabular-nums;color:var(--text);font-weight:500;min-width:76px;text-align:right}
+.dk-text{padding:18px 20px;display:flex;flex-direction:column;min-height:380px}
+.dk-step{font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--primary)}
+.dk-text h3{font-size:19px;font-weight:600;margin:4px 0 8px;line-height:1.3}
+.dk-body{flex:1}
+.dk-body p{margin:0 0 10px}
+.dk-body ul{margin:0 0 10px;padding-left:20px}
+.dk-body li{margin:4px 0}
+.eq{overflow-x:auto;padding:6px 0;text-align:center;font-size:17px}
+.dk-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.dk-dots{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.dk-dots button{width:10px;height:10px;padding:0;border-radius:50%;border:1px solid var(--muted);background:transparent;cursor:pointer}
+.dk-dots button[aria-current="step"]{background:var(--primary);border-color:var(--primary)}
+.problem{padding:16px 20px;margin-bottom:14px}
+.problem h2{margin:0 0 6px;font-size:16px}
+.problem p{margin:0 0 6px}
+.problem ol{margin:6px 0 0;padding-left:22px}
+.problem li{margin:2px 0}
+.problem ol{list-style:lower-alpha}
+.inwrap{display:inline-flex;align-items:center;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);padding:0 10px;gap:6px;vertical-align:middle}
+.inwrap:focus-within{border-color:var(--primary)}
+.inwrap.bad{border-color:var(--danger)}
+.inwrap input{width:64px;border:0;background:transparent;color:var(--text);font:inherit;font-weight:600;font-variant-numeric:tabular-nums;outline:none}
+.err{color:var(--danger);font-size:13px}
+table.st{width:100%;border-collapse:collapse;font-size:14px;border-top:1px solid var(--line)}
+table.st th,table.st td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+table.st tr:last-child td{border-bottom:0}
+table.st th{font-weight:500;color:var(--muted);font-size:13px}
+table.st td:first-child,table.st th:first-child{text-align:left;font-weight:600}
+table.st td.q{color:var(--muted)}
+table.st td.new{background:color-mix(in srgb,var(--ok) 18%,transparent);font-weight:600}
+.tblwrap{overflow-x:auto}
+.simgrid{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr)}
+.scene3{height:430px;border-right:1px solid var(--line)}
+.g3{display:grid;grid-template-rows:1fr 1fr}
+.g3 .gcv{height:215px}
+.g3 .gcv+.gcv{border-top:1px solid var(--line)}
+.simbar{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
+.simbar input{flex:1;min-width:120px}
+.ro{display:flex;gap:16px;flex-wrap:wrap}
+.ro b{font-weight:600;color:var(--text)}
+footer{margin-top:26px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+@media (max-width:900px){
+  .deck{grid-template-columns:minmax(0,1fr)}
+  .dk-cv{height:320px}
+  .dk-text{min-height:0}
+  .simgrid{grid-template-columns:minmax(0,1fr)}
+  .scene3{height:320px;border-right:0;border-bottom:1px solid var(--line)}
+  .btn,.seg button{min-height:44px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Motion graphs, stages and gravity</h1>
+  <p class="sub">Edexcel A level Mathematics, Mechanics: kinematics with constant acceleration</p>
+
+  <nav class="tabs" aria-label="Windows">
+    <a href="#graphs" data-view="graphs">Motion graphs</a>
+    <a href="#slope" data-view="slope">Slope</a>
+    <a href="#area" data-view="area">Area</a>
+    <a href="#stages" data-view="stages">Solving in stages</a>
+    <a href="#gravity" data-view="gravity">Vertical motion</a>
+  </nav>
+
+  <section class="view" id="v-graphs">
+    <div class="seg" role="group" aria-label="Choose a motion">
+      <button data-mc="0" aria-pressed="true">Constant acceleration</button>
+      <button data-mc="1" aria-pressed="false">Constant velocity</button>
+      <button data-mc="2" aria-pressed="false">At rest</button>
+    </div>
+    <div class="deck">
+      <div class="panel dk-vis">
+        <div class="mcv"><canvas id="mcv" aria-label="Particle position with its displacement, velocity and acceleration against time graphs"></canvas></div>
+        <div class="dk-ctrl"><button class="btn" id="mplay">Play</button><span>Time</span><input type="range" id="mrange" min="0" max="6" step="0.01" value="6" aria-label="Time"><output id="mout">6.00 s</output></div>
+      </div>
+      <div class="panel dk-text mtext"><h3 id="mtitle"></h3><div class="dk-body" id="mtext"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-slope" hidden><div id="deckSlope"></div></section>
+  <section class="view" id="v-area" hidden><div id="deckArea"></div></section>
+
+  <section class="view" id="v-stages" hidden>
+    <div class="panel problem">
+      <h2>Example problem</h2>
+      <p>A cyclist starts from rest at a point <span data-tex="A"></span> and accelerates uniformly for <span data-tex="8\ \text{s}"></span>, reaching a speed of <span data-tex="12\ \text{m s}^{-1}"></span>. She holds this speed for <span data-tex="20\ \text{s}"></span>. She then brakes uniformly and comes to rest at a point <span data-tex="B"></span>. The distance <span data-tex="AB"></span> is <span data-tex="324\ \text{m}"></span>. Find:</p>
+      <ol>
+        <li>her acceleration in the first stage,</li>
+        <li>the time she spends braking,</li>
+        <li>her deceleration while braking,</li>
+        <li>her speed when she is <span data-tex="16\ \text{m}"></span> from <span data-tex="B"></span>.</li>
+      </ol>
+    </div>
+    <div id="deckStages"></div>
+  </section>
+
+  <section class="view" id="v-gravity" hidden>
+    <div class="panel problem">
+      <h2>Example problem</h2>
+      <p>A ball is projected vertically upwards from a point <span data-tex="O"></span> with speed
+        <span class="inwrap" id="u3Wrap"><span data-tex="u ="></span><input id="u3In" type="text" inputmode="decimal" value="14.7" aria-label="Speed of projection in metres per second"></span>
+        <span data-tex="\text{m s}^{-1}"></span>
+        <button class="btn" id="u3Go">Update</button> <span class="err" id="u3Err" role="alert"></span></p>
+      <p>Find:</p>
+      <ol>
+        <li>the time taken to reach its maximum height,</li>
+        <li>the maximum height above <span data-tex="O"></span>,</li>
+        <li>the total time before it returns to <span data-tex="O"></span>,</li>
+        <li>its velocity as it returns to <span data-tex="O"></span>,</li>
+        <li>the times when it is <b id="pLevel">9.8</b> <span data-tex="\text{m}"></span> above <span data-tex="O"></span>.</li>
+      </ol>
+    </div>
+    <div id="deckGravity"></div>
+    <div class="panel sim" id="sim">
+      <div class="simgrid">
+        <div class="scene3"><canvas id="sc3" aria-label="Animation of the ball"></canvas></div>
+        <div class="g3">
+          <div class="gcv"><canvas id="gs3" aria-label="Displacement time graph"></canvas></div>
+          <div class="gcv"><canvas id="gv3" aria-label="Velocity time graph"></canvas></div>
+        </div>
+      </div>
+      <div class="simbar">
+        <button class="btn" id="play3">Play whole flight</button>
+        <input type="range" id="scrub3" min="0" max="1000" step="1" value="0" aria-label="Time in the flight">
+        <span class="tnum ro">
+          <span><span data-tex="t ="></span> <b id="r3t">0.00</b> <span data-tex="\text{s}"></span></span>
+          <span><span data-tex="s ="></span> <b id="r3s">0.00</b> <span data-tex="\text{m}"></span></span>
+          <span><span data-tex="v ="></span> <b id="r3v">0.00</b> <span data-tex="\text{m s}^{-1}"></span></span>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <footer>Model: particles moving in a straight line, constant acceleration within each stage, <span data-tex="g = 9.8\ \text{m s}^{-2}"></span>, no air resistance.</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script>
+(function(){
+'use strict';
+const $ = id => document.getElementById(id), root = document.documentElement;
+const FONT = '"IBM Plex Sans", system-ui, sans-serif';
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+
+/* ---------- maths text ---------- */
+function tex(e, s, display){
+  if (window.katex){ try { katex.render(s, e, {output:'mathml', displayMode:!!display, throwOnError:false}); return; } catch(err){} }
+  e.textContent = s;
+}
+function renderTex(scope){ scope.querySelectorAll('[data-tex]').forEach(e => tex(e, e.dataset.tex, e.hasAttribute('data-display'))); }
+const esc = s => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+function mathHTML(s){
+  return s.replace(/\$\$([^$]+)\$\$/g, (m, a) => '<div class="eq" data-tex="' + esc(a.trim()) + '" data-display></div>')
+          .replace(/\$([^$]+)\$/g, (m, a) => '<span data-tex="' + esc(a) + '"></span>');
+}
+const fmt = (x, d = 2) => { const p = Math.pow(10, d), r = Math.round((x + Math.sign(x) * 1e-9) * p) / p; return (Math.abs(r) < 0.5 / p ? 0 : r).toFixed(d); };
+const trim = (x, d = 3) => String(Number((Math.abs(x) < 1e-9 ? 0 : x).toFixed(d)));
+function niceStep(range, n){ const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p; return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p; }
+
+/* ---------- canvas helpers ---------- */
+let _col = null;
+function col(){
+  if (!_col){
+    const cs = getComputedStyle(root), v = n => cs.getPropertyValue(n).trim();
+    _col = {text:v('--text'), muted:v('--muted'), grid:v('--grid'), line:v('--line'), panel:v('--panel'), primary:v('--primary'), accent:v('--accent'), fourth:v('--fourth'), ok:v('--ok')};
+    requestAnimationFrame(() => { _col = null; });
+  }
+  return _col;
+}
+function setupCanvas(c, drawFn){
+  const o = {c, ctx:c.getContext('2d'), w:0, h:0, A:null};
+  new ResizeObserver(() => {
+    const r = c.getBoundingClientRect(); if (!r.width || !r.height) return;
+    const d = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = Math.round(r.width * d); c.height = Math.round(r.height * d);
+    o.ctx.setTransform(d, 0, 0, d, 0, 0); o.w = r.width; o.h = r.height; drawFn();
+  }).observe(c);
+  return o;
+}
+function seg(ctx, a, b, c, d){ ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); }
+function dash(ctx, a, b, c, d, color, lw, pat){ ctx.save(); ctx.setLineDash(pat || [5, 4]); ctx.strokeStyle = color; ctx.lineWidth = lw || 1.5; seg(ctx, a, b, c, d); ctx.restore(); }
+function dot(ctx, x, y, color, ring, r){ ctx.fillStyle = color; ctx.strokeStyle = ring; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r || 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+/* text with single-character subscripts (x_1) and superscripts (s^2) */
+function lab(ctx, str, x, y, o){
+  o = o || {};
+  const size = o.size || 12.5, w8 = o.bold ? '600 ' : '400 ', font = w8 + size + 'px ' + FONT, small = w8 + (size * 0.74) + 'px ' + FONT;
+  const parts = []; let i = 0, buf = '';
+  while (i < str.length){
+    const ch = str[i];
+    if ((ch === '_' || ch === '^') && i + 1 < str.length){ if (buf){ parts.push([buf, 0]); buf = ''; } parts.push([str[i + 1], ch === '_' ? 1 : -1]); i += 2; }
+    else { buf += ch; i++; }
+  }
+  if (buf) parts.push([buf, 0]);
+  let total = 0;
+  parts.forEach(p => { ctx.font = p[1] ? small : font; p[2] = ctx.measureText(p[0]).width; total += p[2]; });
+  let px = o.align === 'center' ? x - total / 2 : o.align === 'right' ? x - total : x;
+  if (o.minX != null) px = Math.max(px, o.minX);
+  if (o.maxX != null) px = Math.min(px, o.maxX - total);
+  if (o.bg){ ctx.fillStyle = o.bg; ctx.fillRect(px - 4, y - size, total + 8, size + 6); }
+  ctx.fillStyle = o.color || '#888'; ctx.textAlign = 'left';
+  parts.forEach(p => { ctx.font = p[1] ? small : font; ctx.fillText(p[0], px, y + (p[1] === 1 ? size * 0.28 : p[1] === -1 ? -size * 0.4 : 0)); px += p[2]; });
+}
+function axes(o, C, g){
+  const ctx = o.ctx, w = o.w, h = o.h; if (!w) return null;
+  ctx.clearRect(0, 0, w, h);
+  const P = {l:44, r:16, t:24, b:26};
+  const X = x => P.l + (x / g.xmax) * (w - P.l - P.r), Y = y => P.t + (g.ymax - y) / (g.ymax - g.ymin) * (h - P.t - P.b);
+  ctx.lineWidth = 1; ctx.font = '11px ' + FONT;
+  const xs = g.xstep || niceStep(g.xmax, 6), ys = g.ystep || niceStep(g.ymax - g.ymin, 5);
+  for (let x = 0; x <= g.xmax + 1e-9; x += xs){ ctx.strokeStyle = C.grid; seg(ctx, X(x), P.t, X(x), h - P.b); ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.fillText(trim(x, 2), X(x), h - 8); }
+  for (let y = Math.ceil(g.ymin / ys - 1e-9) * ys; y <= g.ymax + 1e-9; y += ys){ ctx.strokeStyle = C.grid; seg(ctx, P.l, Y(y), w - P.r, Y(y)); ctx.fillStyle = C.muted; ctx.textAlign = 'right'; ctx.fillText(trim(y, 2), P.l - 6, Y(y) + 4); }
+  ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5; seg(ctx, P.l, Y(0), w - P.r, Y(0)); seg(ctx, P.l, P.t, P.l, h - P.b);
+  lab(ctx, g.yl, 10, 15, {color:C.text, size:11.5, bold:true});
+  lab(ctx, g.xl, w - P.r, Y(0) - 6, {color:C.text, size:11.5, bold:true, align:'right'});
+  o.A = {X, Y, P, w, h, g};
+  return o.A;
+}
+function plot(ctx, A, f, a, b, color, lw, alpha){
+  if (b <= a) return;
+  ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha; ctx.strokeStyle = color; ctx.lineWidth = lw || 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath(); const n = 120;
+  for (let i = 0; i <= n; i++){ const x = a + (b - a) * i / n; i ? ctx.lineTo(A.X(x), A.Y(f(x))) : ctx.moveTo(A.X(x), A.Y(f(x))); }
+  ctx.stroke(); ctx.restore();
+}
+function fillArea(ctx, A, f, a, b, color, alpha){
+  if (b <= a) return;
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(A.X(a), A.Y(0)); const n = 80;
+  for (let i = 0; i <= n; i++){ const x = a + (b - a) * i / n; ctx.lineTo(A.X(x), A.Y(f(x))); }
+  ctx.lineTo(A.X(b), A.Y(0)); ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function clipPlot(ctx, A){ ctx.save(); ctx.beginPath(); ctx.rect(A.P.l, A.P.t - 2, A.w - A.P.l - A.P.r, A.h - A.P.t - A.P.b + 4); ctx.clip(); }
+function arrow(ctx, x1, y1, x2, y2, color, lw){
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw || 2; seg(ctx, x1, y1, x2, y2);
+  const a = Math.atan2(y2 - y1, x2 - x1), L = 9;
+  ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - L * Math.cos(a - 0.45), y2 - L * Math.sin(a - 0.45)); ctx.lineTo(x2 - L * Math.cos(a + 0.45), y2 - L * Math.sin(a + 0.45)); ctx.closePath(); ctx.fill();
+}
+
+/* ---------- slide deck ---------- */
+function makeDeck(rootEl, slides, opt){
+  opt = opt || {};
+  rootEl.classList.add('deck');
+  rootEl.innerHTML = '<div class="dk-vis panel"></div><div class="dk-text panel"><div class="dk-step"></div><h3></h3><div class="dk-body"></div><div class="dk-nav"><button class="btn dk-prev">Back</button><div class="dk-dots"></div><button class="btn primary dk-next">Next</button></div></div>';
+  let vis = rootEl.querySelector('.dk-vis'), o = null, ctrl = null, range = null, outp = null, ctrlLabel = null, playBtn = null, playing = false, lastTs = null;
+  function stopPlay(){ playing = false; if (playBtn) playBtn.textContent = 'Play'; }
+  function step(ts){
+    if (!playing) return;
+    if (lastTs === null) lastTs = ts;
+    d.val = Math.min(+range.max, d.val + (ts - lastTs) / 1000); lastTs = ts;
+    range.value = d.val; outp.textContent = slides[d.i].ctrl.show(d.val); d.redraw();
+    if (d.val >= +range.max) stopPlay(); else requestAnimationFrame(step);
+  }
+  const d = {i:0, val:0, slides, kept:false, stop(){ stopPlay(); },
+    redraw(){ const s = slides[d.i]; if (o && o.w && s.draw) s.draw(o, col(), d.val, d.i); },
+    go(i){
+      d.i = Math.max(0, Math.min(slides.length - 1, i));
+      const s = slides[d.i];
+      stepEl.textContent = 'Step ' + (d.i + 1) + ' of ' + slides.length;
+      h3.textContent = s.title;
+      body.innerHTML = mathHTML(typeof s.html === 'function' ? s.html() : s.html); renderTex(body);
+      dots.forEach((b, k) => { if (k === d.i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
+      prev.disabled = d.i === 0; next.textContent = d.i === slides.length - 1 ? 'Start again' : 'Next';
+      if (ctrl){
+        const keep = s.ctrl && s.ctrl.keep && d.kept;
+        if (!keep) stopPlay();
+        if (s.ctrl){ ctrl.hidden = false; ctrlLabel.textContent = s.ctrl.label; range.min = s.ctrl.min; range.max = s.ctrl.max; range.step = s.ctrl.step; if (!keep) d.val = s.ctrl.value; range.value = d.val; outp.textContent = s.ctrl.show(d.val); }
+        else ctrl.hidden = true;
+        d.kept = !!(s.ctrl && s.ctrl.keep);
+      }
+      d.redraw();
+      if (opt.onChange) opt.onChange(d.i, s);
+      if (s.enter) s.enter();
+    }
+  };
+  if (opt.visEl){ vis.replaceWith(opt.visEl); opt.visEl.classList.add('dk-vis'); }
+  else {
+    vis.innerHTML = '<div class="dk-cv"><canvas></canvas></div><div class="dk-ctrl" hidden>' + (opt.play ? '<button class="btn dk-play">Play</button>' : '') + '<span></span><input type="range"><output></output></div>' + (opt.extraHTML || '');
+    ctrl = vis.querySelector('.dk-ctrl'); ctrlLabel = ctrl.querySelector('span'); range = ctrl.querySelector('input'); outp = ctrl.querySelector('output');
+    range.setAttribute('aria-label', 'Slide control');
+    range.addEventListener('input', () => { stopPlay(); d.val = parseFloat(range.value); outp.textContent = slides[d.i].ctrl.show(d.val); d.redraw(); });
+    playBtn = ctrl.querySelector('.dk-play');
+    if (playBtn) playBtn.addEventListener('click', () => {
+      if (playing) return stopPlay();
+      if (d.val >= +range.max - 1e-9) d.val = +range.min;
+      playing = true; lastTs = null; playBtn.textContent = 'Pause'; requestAnimationFrame(step);
+    });
+    o = setupCanvas(vis.querySelector('canvas'), () => d.redraw());
+  }
+  const stepEl = rootEl.querySelector('.dk-step'), h3 = rootEl.querySelector('h3'), body = rootEl.querySelector('.dk-body');
+  const prev = rootEl.querySelector('.dk-prev'), next = rootEl.querySelector('.dk-next'), dotBox = rootEl.querySelector('.dk-dots');
+  const dots = slides.map((s, k) => { const b = el('button'); b.setAttribute('aria-label', 'Go to step ' + (k + 1)); b.addEventListener('click', () => d.go(k)); dotBox.appendChild(b); return b; });
+  prev.addEventListener('click', () => d.go(d.i - 1));
+  next.addEventListener('click', () => d.go(d.i === slides.length - 1 ? 0 : d.i + 1));
+  d.go(0);
+  return d;
+}
+
+/* =====================================================================
+   WINDOW 1: MOTION GRAPHS (one graph per slide)
+   ===================================================================== */
+const sAcc = t => 2 * t + 0.75 * t * t, vAcc = t => 2 + 1.5 * t;
+const CASES = [
+  {s:sAcc, v:vAcc, a:() => 1.5, txt:[String.raw`The curve gets steeper: more distance each second.`, String.raw`Straight line up: $v$ rises by $1.5\ \text{m s}^{-1}$ every second.`, String.raw`Horizontal line: $a = 1.5\ \text{m s}^{-2}$ the whole time.`]},
+  {s:t => 4 * t, v:() => 4, a:() => 0, txt:[String.raw`Straight line: the same distance every second.`, String.raw`Horizontal line: $v = 4\ \text{m s}^{-1}$ the whole time.`, String.raw`On the axis: $a = 0$.`]},
+  {s:() => 10, v:() => 0, a:() => 0, txt:[String.raw`Horizontal line: it stays at $s = 10\ \text{m}$.`, String.raw`On the axis: $v = 0$.`, String.raw`On the axis: $a = 0$.`]}
+];
+const ROWS = [
+  {k:'s', yl:'s (m)', c:'primary', ymin:0, ymax:40, step:10, title:'Displacement–time graph'},
+  {k:'v', yl:'v (m/s)', c:'accent', ymin:-2, ymax:12, step:2, title:'Velocity–time graph'},
+  {k:'a', yl:'a (m/s^2)', c:'fourth', ymin:-1, ymax:3, step:1, title:'Acceleration–time graph'}
+];
+let mc = 0, mt = 6, mplay = false, mlast = null;
+const NAMES = ['Constant acceleration', 'Constant velocity', 'At rest'];
+const MO = setupCanvas($('mcv'), () => drawMotion());
+function drawMotion(){
+  const o = MO, C = col(), ctx = o.ctx, w = o.w, h = o.h; if (!w) return;
+  ctx.clearRect(0, 0, w, h);
+  const cs = CASES[mc], l = 44, r = 16, y = 30, X = s => l + s / 40 * (w - l - r);
+  ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5; seg(ctx, l, y, w - r, y);
+  ctx.font = '11px ' + FONT; ctx.fillStyle = C.muted; ctx.textAlign = 'center';
+  for (let s = 0; s <= 40; s += 10){ ctx.lineWidth = 1; seg(ctx, X(s), y - 4, X(s), y + 4); ctx.fillText(String(s), X(s), y + 18); }
+  lab(ctx, 's (m)', 6, y + 4, {color:C.text, size:11.5, bold:true});
+  const px = X(cs.s(mt));
+  ctx.globalAlpha = 0.18; ctx.fillStyle = C.primary; ctx.beginPath(); ctx.arc(px, y, 14, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+  dot(ctx, px, y, C.primary, C.panel, 7);
+  const gh = (h - 64) / 3;
+  ROWS.forEach((row, i) => {
+    ctx.strokeStyle = C.line; ctx.lineWidth = 1; seg(ctx, 0, 62 + i * gh, w, 62 + i * gh);
+    ctx.save(); ctx.translate(0, 64 + i * gh);
+    const A = axes({ctx, w, h:gh - 2}, C, {xmax:6, ymin:row.ymin, ymax:row.ymax, xl:'t (s)', yl:row.yl, xstep:1, ystep:row.step * (row.k === 'v' ? 2 : 1)});
+    if (A){
+      const f = cs[row.k], color = C[row.c];
+      plot(ctx, A, f, 0, 6, color, 2, 0.25); plot(ctx, A, f, 0, mt, color, 3, 1);
+      dash(ctx, A.X(mt), A.P.t, A.X(mt), A.h - A.P.b, C.muted, 1, [2, 3]);
+      dot(ctx, A.X(mt), A.Y(f(mt)), color, C.panel, 5.5);
+    }
+    ctx.restore();
+  });
+  $('mrange').value = mt; $('mout').textContent = fmt(mt) + ' s';
+}
+function motionText(){
+  $('mtitle').textContent = NAMES[mc];
+  $('mtext').innerHTML = mathHTML(ROWS.map((row, i) => '<p><span class="mk mk-' + row.k + '"></span><b>' + row.title.replace(' graph', '') + '</b><br>' + CASES[mc].txt[i] + '</p>').join(''));
+  renderTex($('mtext'));
+}
+function stopMotion(){ mplay = false; $('mplay').textContent = 'Play'; }
+function mstep(ts){
+  if (!mplay) return;
+  if (mlast === null) mlast = ts;
+  mt = Math.min(6, mt + (ts - mlast) / 1000); mlast = ts;
+  drawMotion();
+  if (mt >= 6) stopMotion(); else requestAnimationFrame(mstep);
+}
+$('mplay').addEventListener('click', () => {
+  if (mplay) return stopMotion();
+  if (mt >= 6 - 1e-9) mt = 0;
+  mplay = true; mlast = null; $('mplay').textContent = 'Pause'; requestAnimationFrame(mstep);
+});
+$('mrange').addEventListener('input', e => { stopMotion(); mt = parseFloat(e.target.value); drawMotion(); });
+document.querySelectorAll('[data-mc]').forEach(b => b.addEventListener('click', () => {
+  mc = +b.dataset.mc;
+  document.querySelectorAll('[data-mc]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  motionText(); drawMotion();
+}));
+motionText();
+
+/* ----- shared pictures for the slide shows ----- */
+function slopePic(o, C, g){
+  const A = axes(o, C, {xmax:6, ymin:0, ymax:g.ymax, xl:'t (s)', yl:g.yl, xstep:1, ystep:g.ystep}); if (!A) return;
+  const ctx = o.ctx, x1 = g.x1, x2 = g.x2, y1 = g.f(x1), y2 = g.f(x2), color = C[g.c], bg = C.panel;
+  if (g.drop){
+    [[x1, y1, 'x_1', 'y_1'], [x2, y2, 'x_2', 'y_2']].forEach(p => {
+      dash(ctx, A.X(p[0]), A.Y(p[1]), A.X(p[0]), A.Y(0), C.muted, 1, [3, 4]); dash(ctx, A.X(p[0]), A.Y(p[1]), A.X(0), A.Y(p[1]), C.muted, 1, [3, 4]);
+      lab(ctx, p[2], A.X(p[0]) + 5, A.Y(0) - 7, {color:C.text, bold:true, bg});
+      lab(ctx, p[3], A.X(0) + 6, A.Y(p[1]) - 6, {color:C.text, bold:true, bg});
+    });
+  }
+  if (g.chord){ const m = (y2 - y1) / (x2 - x1); clipPlot(ctx, A); dash(ctx, A.X(0), A.Y(y1 - m * x1), A.X(6), A.Y(y1 + m * (6 - x1)), C.text, 1.5, [6, 4]); ctx.restore(); }
+  plot(ctx, A, g.f, 0, 6, color, 2.75, 1);
+  if (g.tri){
+    dash(ctx, A.X(x1), A.Y(y1), A.X(x2), A.Y(y1), C.text, 1.75); dash(ctx, A.X(x2), A.Y(y1), A.X(x2), A.Y(y2), C.text, 1.75);
+    lab(ctx, 'x_2 - x_1 = ' + trim(x2 - x1) + ' s', (A.X(x1) + A.X(x2)) / 2, A.Y(y1) + 19, {color:C.text, bold:true, align:'center', bg});
+    lab(ctx, 'y_2 - y_1 = ' + trim(y2 - y1) + ' ' + g.unit, A.X(x2) + 9, (A.Y(y1) + A.Y(y2)) / 2 + 4, {color:C.text, bold:true, bg, maxX:A.w - 4});
+  }
+  dot(ctx, A.X(x1), A.Y(y1), color, bg, 6); dot(ctx, A.X(x2), A.Y(y2), color, bg, 6);
+  lab(ctx, g.drop ? '(' + trim(x1) + ', ' + trim(y1) + ')' : '(x_1, y_1)', A.X(x1) - 9, A.Y(y1) - 11, {color:C.text, align:'right', bg, minX:A.P.l + 6});
+  lab(ctx, g.drop ? '(' + trim(x2) + ', ' + trim(y2) + ')' : '(x_2, y_2)', A.X(x2) - 9, A.Y(y2) - 11, {color:C.text, align:'right', bg, minX:A.P.l + 6});
+  if (g.notes){ lab(ctx, g.notes[0], A.w - A.P.r - 4, A.Y(0) - 26, {color:color, bold:true, align:'right', bg}); lab(ctx, g.notes[1], A.P.l + 60, A.P.t + 12, {color:color, bold:true, bg}); }
+}
+function ladder(o, C){
+  const ctx = o.ctx, w = o.w, h = o.h; if (!w) return; ctx.clearRect(0, 0, w, h);
+  const bw = Math.min(150, (w - 90) / 3), bh = 64, gap = (w - 3 * bw) / 4, y = h / 2 - bh / 2;
+  const names = [['Displacement', 's–t graph', C.primary], ['Velocity', 'v–t graph', C.accent], ['Acceleration', 'a–t graph', C.fourth]];
+  const xs = names.map((n, i) => gap + i * (bw + gap));
+  names.forEach((n, i) => {
+    ctx.fillStyle = C.panel; ctx.strokeStyle = n[2]; ctx.lineWidth = 2; ctx.beginPath(); ctx.rect(xs[i], y, bw, bh); ctx.fill(); ctx.stroke();
+    lab(ctx, n[0], xs[i] + bw / 2, y + 27, {color:C.text, bold:true, align:'center', size:13.5});
+    lab(ctx, n[1], xs[i] + bw / 2, y + 47, {color:C.muted, align:'center'});
+  });
+  for (let i = 0; i < 2; i++){
+    const a = xs[i] + bw + 6, b = xs[i + 1] - 6, mid = (a + b) / 2;
+    arrow(ctx, a, y - 22, b, y - 22, C.text, 2); lab(ctx, 'slope', mid, y - 32, {color:C.text, bold:true, align:'center'}); lab(ctx, 'differentiate', mid, y - 50, {color:C.muted, align:'center', size:11.5});
+    arrow(ctx, b, y + bh + 22, a, y + bh + 22, C.text, 2); lab(ctx, 'area', mid, y + bh + 42, {color:C.text, bold:true, align:'center'}); lab(ctx, 'integrate', mid, y + bh + 59, {color:C.muted, align:'center', size:11.5});
+  }
+}
+
+/* ----- slide show: slope ----- */
+const slopeSlides = [
+  {title:'Pick two points on the line',
+   html:String.raw`<p>$x$ is the horizontal axis and $y$ is the vertical axis.</p><p>Here $x$ is the time $t$ and $y$ is the velocity $v$.</p>`,
+   draw:(o, C) => slopePic(o, C, {f:vAcc, ymax:12, ystep:2, yl:'v (m/s)', c:'accent', x1:1, x2:4, drop:true, notes:['x is the time, t', 'y is the velocity, v']})},
+  {title:'Draw a triangle',
+   html:String.raw`$$x_2 - x_1 = 4 - 1 = 3\ \text{s}$$$$y_2 - y_1 = 8 - 3.5 = 4.5\ \text{m s}^{-1}$$`,
+   draw:(o, C) => slopePic(o, C, {f:vAcc, ymax:12, ystep:2, yl:'v (m/s)', c:'accent', x1:1, x2:4, tri:true, unit:'m/s'})},
+  {title:'Divide: up over across',
+   html:String.raw`$$\text{slope} = \frac{y_2 - y_1}{x_2 - x_1} = \frac{8 - 3.5}{4 - 1} = 1.5\ \text{m s}^{-2}$$<p>Slope of a $v$–$t$ graph is the <b>acceleration</b>.</p>`,
+   draw:(o, C) => slopePic(o, C, {f:vAcc, ymax:12, ystep:2, yl:'v (m/s)', c:'accent', x1:1, x2:4, tri:true, unit:'m/s'})},
+  {title:'Same method on an s–t graph',
+   html:String.raw`$$\text{slope} = \frac{16 - 4}{4 - 1} = 4\ \text{m s}^{-1}$$<p>Slope of an $s$–$t$ graph is the <b>velocity</b>.</p>`,
+   draw:(o, C) => slopePic(o, C, {f:t => 4 * t, ymax:28, ystep:4, yl:'s (m)', c:'primary', x1:1, x2:4, tri:true, unit:'m'})},
+  {title:'A curve',
+   html:String.raw`<p>Two points on a curve give the <b>average</b> velocity.</p>$$\frac{28.75 - 2.75}{5 - 1} = 6.5\ \text{m s}^{-1}$$`,
+   draw:(o, C) => slopePic(o, C, {f:sAcc, ymax:40, ystep:10, yl:'s (m)', c:'primary', x1:1, x2:5, tri:true, chord:true, unit:'m'})},
+  {title:'Calculus: the tangent',
+   html:String.raw`<p>Drag the slider. As the points meet, the chord becomes the tangent.</p>$$v = \frac{ds}{dt} = 2 + 1.5t$$<p>At $t = 2$: $v = 5\ \text{m s}^{-1}$.</p>`,
+   ctrl:{label:'Gap between the points', min:0.05, max:3, step:0.05, value:3, show:v => fmt(v) + ' s'},
+   draw:(o, C, hgap) => {
+     const A = axes(o, C, {xmax:6, ymin:0, ymax:40, xl:'t (s)', yl:'s (m)', xstep:1, ystep:10}); if (!A) return;
+     const ctx = o.ctx, x1 = 2, x2 = 2 + hgap, y1 = sAcc(x1), y2 = sAcc(x2), m = (y2 - y1) / hgap;
+     clipPlot(ctx, A);
+     dash(ctx, A.X(0), A.Y(y1 - 5 * 2), A.X(6), A.Y(y1 + 5 * 4), C.fourth, 2, [3, 4]);
+     ctx.strokeStyle = C.text; ctx.lineWidth = 1.5; seg(ctx, A.X(0), A.Y(y1 - m * 2), A.X(6), A.Y(y1 + m * 4));
+     ctx.restore();
+     plot(ctx, A, sAcc, 0, 6, C.primary, 2.75, 1);
+     dot(ctx, A.X(x1), A.Y(y1), C.primary, C.panel, 6); dot(ctx, A.X(x2), A.Y(y2), C.primary, C.panel, 6);
+     lab(ctx, 'Chord slope = ' + fmt(m) + ' m/s', A.P.l + 14, A.P.t + 20, {color:C.text, bold:true, bg:C.panel, size:13.5});
+     lab(ctx, 'Tangent slope at t = 2 is 5.00 m/s', A.P.l + 14, A.P.t + 42, {color:C.fourth, bold:true, bg:C.panel, size:13.5});
+   }},
+  {title:'Summary',
+   html:String.raw`$$v = \frac{ds}{dt} \qquad a = \frac{dv}{dt}$$<ul><li>Straight line: $\dfrac{y_2 - y_1}{x_2 - x_1}$.</li><li>Curve: tangent, or differentiate.</li></ul>`,
+   draw:(o, C) => ladder(o, C)}
+];
+
+/* ----- slide show: area ----- */
+const vNeg = t => 6 - 2 * t;
+function areaBase(o, C, f, ymin, ymax, ystep, yl){ return axes(o, C, {xmax:6, ymin, ymax, xl:'t (s)', yl, xstep:1, ystep}); }
+const areaSlides = [
+  {title:'A rectangle',
+   html:String.raw`$$\text{area} = 6 \times 4 = 24\ \text{m}$$<p>Area under a $v$–$t$ graph is the <b>displacement</b>.</p>`,
+   draw:(o, C) => { const A = areaBase(o, C, null, 0, 12, 2, 'v (m/s)'); if (!A) return; const ctx = o.ctx, f = () => 4;
+     fillArea(ctx, A, f, 0, 6, C.accent, 0.3); plot(ctx, A, f, 0, 6, C.accent, 2.75, 1);
+     lab(ctx, 'height = 4 m/s', A.X(0) + 10, A.Y(4) - 9, {color:C.text, bold:true, bg:C.panel});
+     lab(ctx, 'base = 6 s', A.X(3), A.Y(0) - 10, {color:C.text, bold:true, align:'center'});
+     lab(ctx, 'area = 24 m', A.X(3), A.Y(2) + 4, {color:C.text, bold:true, align:'center', size:15}); }},
+  {title:'A trapezium',
+   html:String.raw`$$\tfrac{1}{2}(2 + 11)(6) = 39\ \text{m}$$<p>This is $s = \tfrac{1}{2}(u + v)t$.</p>`,
+   draw:(o, C) => { const A = areaBase(o, C, null, 0, 12, 2, 'v (m/s)'); if (!A) return; const ctx = o.ctx;
+     fillArea(ctx, A, vAcc, 0, 6, C.accent, 0.3); plot(ctx, A, vAcc, 0, 6, C.accent, 2.75, 1);
+     lab(ctx, 'u = 2', A.X(0) + 8, A.Y(1) + 4, {color:C.text, bold:true});
+     lab(ctx, 'v = 11', A.X(6) - 8, A.Y(5.5), {color:C.text, bold:true, align:'right'});
+     lab(ctx, 't = 6 s', A.X(3), A.Y(0) - 10, {color:C.text, bold:true, align:'center'});
+     lab(ctx, 'area = 39 m', A.X(3.4), A.Y(3) + 4, {color:C.text, bold:true, align:'center', size:15}); }},
+  {title:'Rectangle plus triangle',
+   html:String.raw`$$ut + \tfrac{1}{2}at^2 = 12 + 27 = 39\ \text{m}$$<p>This is $s = ut + \tfrac{1}{2}at^2$.</p>`,
+   draw:(o, C) => { const A = areaBase(o, C, null, 0, 12, 2, 'v (m/s)'); if (!A) return; const ctx = o.ctx;
+     fillArea(ctx, A, () => 2, 0, 6, C.primary, 0.32);
+     ctx.save(); ctx.globalAlpha = 0.32; ctx.fillStyle = C.accent; ctx.beginPath(); ctx.moveTo(A.X(0), A.Y(2)); ctx.lineTo(A.X(6), A.Y(11)); ctx.lineTo(A.X(6), A.Y(2)); ctx.closePath(); ctx.fill(); ctx.restore();
+     dash(ctx, A.X(0), A.Y(2), A.X(6), A.Y(2), C.text, 1.5); plot(ctx, A, vAcc, 0, 6, C.accent, 2.75, 1);
+     lab(ctx, 'rectangle: ut = 12 m', A.X(3), A.Y(1) + 4, {color:C.text, bold:true, align:'center'});
+     lab(ctx, 'triangle: (1/2)at^2 = 27 m', A.X(4.1), A.Y(4.4), {color:C.text, bold:true, align:'center'});
+     lab(ctx, 'at = 9', A.X(6) - 8, A.Y(8), {color:C.text, bold:true, align:'right'}); }},
+  {title:'Calculus: thin strips',
+   html:String.raw`<p>Drag the slider: more strips, closer to the exact area.</p>$$s = \int_0^6 v\,dt = 39\ \text{m}$$`,
+   ctrl:{label:'Number of strips', min:2, max:60, step:1, value:4, show:v => v + ' strips'},
+   draw:(o, C, n) => { const A = areaBase(o, C, null, 0, 12, 2, 'v (m/s)'); if (!A) return; const ctx = o.ctx, dx = 6 / n; let sum = 0;
+     for (let i = 0; i < n; i++){ const x = i * dx, hgt = vAcc(x); sum += hgt * dx;
+       ctx.save(); ctx.globalAlpha = 0.3; ctx.fillStyle = C.accent; ctx.fillRect(A.X(x), A.Y(hgt), A.X(x + dx) - A.X(x), A.Y(0) - A.Y(hgt)); ctx.restore();
+       ctx.strokeStyle = C.accent; ctx.lineWidth = 1; ctx.strokeRect(A.X(x), A.Y(hgt), A.X(x + dx) - A.X(x), A.Y(0) - A.Y(hgt)); }
+     plot(ctx, A, vAcc, 0, 6, C.accent, 2.75, 1);
+     lab(ctx, 'Sum of the strips = ' + fmt(sum) + ' m', A.P.l + 14, A.P.t + 20, {color:C.text, bold:true, bg:C.panel, size:13.5});
+     lab(ctx, 'Exact area = 39.00 m', A.P.l + 14, A.P.t + 42, {color:C.muted, bold:true, bg:C.panel, size:13.5}); }},
+  {title:'Area under an a–t graph',
+   html:String.raw`$$\text{area} = 6 \times 1.5 = 9\ \text{m s}^{-1}$$<p>Area under an $a$–$t$ graph is the <b>change in velocity</b>.</p>`,
+   draw:(o, C) => { const A = areaBase(o, C, null, 0, 3, 0.5, 'a (m/s^2)'); if (!A) return; const ctx = o.ctx, f = () => 1.5;
+     fillArea(ctx, A, f, 0, 6, C.fourth, 0.3); plot(ctx, A, f, 0, 6, C.fourth, 2.75, 1);
+     lab(ctx, 'height = 1.5 m/s^2', A.X(0) + 10, A.Y(1.5) - 9, {color:C.text, bold:true, bg:C.panel});
+     lab(ctx, 'base = 6 s', A.X(3), A.Y(0) - 10, {color:C.text, bold:true, align:'center'});
+     lab(ctx, 'area = 9 m/s', A.X(3), A.Y(0.75) + 4, {color:C.text, bold:true, align:'center', size:15}); }},
+  {title:'Below the axis is negative',
+   html:String.raw`<p><b>Displacement:</b> $9 - 4 = 5\ \text{m}$</p><p><b>Distance:</b> $9 + 4 = 13\ \text{m}$</p>`,
+   draw:(o, C) => { const A = areaBase(o, C, null, -6, 8, 2, 'v (m/s)'); if (!A) return; const ctx = o.ctx;
+     fillArea(ctx, A, vNeg, 0, 3, C.accent, 0.32); fillArea(ctx, A, vNeg, 3, 5, C.fourth, 0.32); plot(ctx, A, vNeg, 0, 5, C.accent, 2.75, 1);
+     lab(ctx, '+9 m', A.X(0.9), A.Y(2) + 4, {color:C.text, bold:true, align:'center', size:15});
+     lab(ctx, '-4 m', A.X(4.4), A.Y(-1.2) + 4, {color:C.text, bold:true, align:'center', size:15});
+     dot(ctx, A.X(3), A.Y(0), C.accent, C.panel, 5.5); lab(ctx, 'v = 0, turns round', A.X(3) + 6, A.Y(0) - 12, {color:C.text, bg:C.panel}); }},
+  {title:'Summary',
+   html:String.raw`$$s = \int v\,dt \qquad v - u = \int a\,dt$$<ul><li>Straight lines: rectangles, triangles, trapezia.</li><li>Curves: integrate.</li></ul>`,
+   draw:(o, C) => ladder(o, C)}
+];
+const deckSlope = makeDeck($('deckSlope'), slopeSlides), deckArea = makeDeck($('deckArea'), areaSlides);
+
+
+/* =====================================================================
+   WINDOW 2: SOLVING IN STAGES
+   ===================================================================== */
+const ST = [{a:0, b:8, name:'Stage 1', c:'primary', what:'speeds up'}, {a:8, b:28, name:'Stage 2', c:'accent', what:'steady speed'}, {a:28, b:34, name:'Stage 3', c:'fourth', what:'slows down'}];
+const vS = t => t < 8 ? 1.5 * t : t < 28 ? 12 : Math.max(0, 12 - 2 * (t - 28));
+function stageGraph(o, C, val, i){
+  const A = axes(o, C, {xmax:36, ymin:0, ymax:18, xl:'t (s)', yl:'v (m/s)', xstep:4, ystep:3}); if (!A) return;
+  const ctx = o.ctx, bg = C.panel, top = A.P.t, bot = A.h - A.P.b;
+  ST.forEach((s, k) => {
+    ctx.save(); ctx.globalAlpha = 0.07; ctx.fillStyle = C[s.c]; ctx.fillRect(A.X(s.a), top, A.X(s.b) - A.X(s.a), bot - top); ctx.restore();
+    if (k) dash(ctx, A.X(s.a), top, A.X(s.a), bot, C.muted, 1, [3, 4]);
+    const mid = (A.X(s.a) + A.X(s.b)) / 2;
+    lab(ctx, s.name, mid, top + 16, {color:C[s.c], bold:true, align:'center', size:13});
+    const dur = i === 0 ? s.what : k === 0 ? '8 s' : k === 1 ? '20 s' : (i < 5 ? 'T = ?' : 'T = 6 s');
+    lab(ctx, dur, mid, top + 33, {color:C.muted, align:'center', size:12});
+  });
+  if (i === 0) return;
+  const shade = (k, strong) => fillArea(ctx, A, vS, ST[k].a, ST[k].b, C[ST[k].c], strong ? 0.5 : 0.22);
+  if (i >= 3) shade(0, i === 3); if (i >= 4) shade(1, i === 4); if (i >= 5) shade(2, i === 5);
+  if (i === 7) fillArea(ctx, A, vS, 30, 34, C.ok, 0.55);
+  ctx.strokeStyle = C.text; ctx.lineWidth = 2.75; ctx.lineJoin = 'round'; ctx.beginPath();
+  [[0, 0], [8, 12], [28, 12], [34, 0]].forEach((p, k) => k ? ctx.lineTo(A.X(p[0]), A.Y(p[1])) : ctx.moveTo(A.X(p[0]), A.Y(p[1]))); ctx.stroke();
+  [[0, 0], [8, 12], [28, 12], [34, 0]].forEach(p => dot(ctx, A.X(p[0]), A.Y(p[1]), C.text, bg, 4.5));
+  if (i === 1){ lab(ctx, '(8, 12)', A.X(8) - 6, A.Y(12) - 10, {color:C.text, align:'right', bg}); lab(ctx, '(28, 12)', A.X(28) + 6, A.Y(12) - 10, {color:C.text, bg, maxX:A.w - 4}); lab(ctx, '(28 + T, 0)', A.X(34) + 4, A.Y(0) - 12, {color:C.text, bg, maxX:A.w - 4}); }
+  if (i >= 3) lab(ctx, '48 m', A.X(5.5), A.Y(2.6), {color:C.text, bold:true, align:'center', size:14});
+  if (i >= 4) lab(ctx, '240 m', A.X(18), A.Y(5.6), {color:C.text, bold:true, align:'center', size:14});
+  if (i >= 5 && i !== 7) lab(ctx, '36 m', A.X(29.9), A.Y(2.6), {color:C.text, bold:true, align:'center', size:14});
+  if (i === 2){
+    dash(ctx, A.X(8), A.Y(0), A.X(8), A.Y(12), C.text, 1.75); dash(ctx, A.X(0), A.Y(0) - 1, A.X(8), A.Y(0) - 1, C.text, 1.75);
+    lab(ctx, 'x_2 - x_1 = 8 s', A.X(4.6), A.Y(1.3), {color:C.text, bold:true, align:'center', bg});
+    lab(ctx, 'y_2 - y_1 = 12 m/s', A.X(8) + 9, A.Y(6) + 4, {color:C.text, bold:true, bg});
+  }
+  if (i === 6){
+    dash(ctx, A.X(28), A.Y(0), A.X(28), A.Y(12), C.text, 1.75);
+    lab(ctx, 'y_2 - y_1 = 0 - 12 = -12 m/s', A.X(28) - 9, A.Y(10.2), {color:C.text, bold:true, align:'right', bg});
+    lab(ctx, 'x_2 - x_1 = 34 - 28 = 6 s', A.X(28) - 9, A.Y(8.6), {color:C.text, bold:true, align:'right', bg});
+  }
+  if (i === 7){
+    dash(ctx, A.X(30), A.Y(0), A.X(30), A.Y(8), C.text, 1.5); dot(ctx, A.X(30), A.Y(8), C.ok, bg, 6);
+    lab(ctx, 'speed here = ?', A.X(30) - 10, A.Y(8) + 4, {color:C.text, bold:true, align:'right', bg});
+    lab(ctx, '16 m left', A.X(30) - 10, A.Y(1.4), {color:C.text, bold:true, align:'right', bg});
+  }
+}
+/* table: [value, step at which it is revealed] */
+const TBL = [
+  ['Stage 1', ['8', 0], ['0', 0], ['12', 0], ['1.5', 2], ['48', 3]],
+  ['Stage 2', ['20', 0], ['12', 0], ['12', 0], ['0', 4], ['240', 4]],
+  ['Stage 3', ['6', 5], ['12', 0], ['0', 0], ['-2', 6], ['36', 5]]
+];
+function stageTable(i){
+  const t = $('stTable'); if (!t) return;
+  let h = '<tr><th>Stage</th><th>Time <span data-tex="t\\ (\\text{s})"></span></th><th>Start <span data-tex="u"></span></th><th>End <span data-tex="v"></span></th><th>Slope <span data-tex="a"></span></th><th>Area <span data-tex="s\\ (\\text{m})"></span></th></tr>';
+  TBL.forEach(r => { h += '<tr><td>' + r[0] + '</td>' + r.slice(1).map(c => c[1] > i ? '<td class="q">?</td>' : '<td' + (c[1] === i && i > 0 ? ' class="new"' : '') + '>' + c[0] + '</td>').join('') + '</tr>'; });
+  t.innerHTML = h; renderTex(t);
+}
+const stageSlides = [
+  {title:'Read the story and split it into stages',
+   html:String.raw`<p>The acceleration is not the same all the way through, so one set of SUVAT values cannot describe the whole journey. Look for the moments where the motion <b>changes</b>.</p><ul><li><b>Stage 1:</b> speeds up from rest for $8\ \text{s}$.</li><li><b>Stage 2:</b> steady $12\ \text{m s}^{-1}$ for $20\ \text{s}$.</li><li><b>Stage 3:</b> slows down to rest, for an unknown time $T$.</li></ul><p>The link between stages: the velocity at the end of one stage is the velocity at the start of the next.</p>`},
+  {title:'Sketch the velocity–time graph',
+   html:String.raw`<p>Draw one straight line per stage and label every value you know.</p><ul><li>Uniform acceleration is a straight line going up.</li><li>Constant velocity is a horizontal line.</li><li>Uniform braking is a straight line going down to $v = 0$.</li></ul><p>Mark the unknown on the sketch too. The braking time is $T$, so the journey ends at $t = 28 + T$. The table shows what is known so far.</p>`},
+  {title:'Stage 1: the slope gives the acceleration',
+   html:String.raw`<p>Part (a). The line runs from $(0, 0)$ to $(8, 12)$.</p>$$a = \frac{y_2 - y_1}{x_2 - x_1} = \frac{12 - 0}{8 - 0} = 1.5\ \text{m s}^{-2}$$<p>No SUVAT equation is needed. Acceleration is the slope of the velocity–time graph.</p>`},
+  {title:'Stage 1: the area gives the distance',
+   html:String.raw`<p>The region under stage 1 is a triangle.</p>$$s_1 = \tfrac{1}{2} \times \text{base} \times \text{height} = \tfrac{1}{2} \times 8 \times 12 = 48\ \text{m}$$<p>Keep this number. The distances from all three stages must add up to $324\ \text{m}$.</p>`},
+  {title:'Stage 2: a flat line',
+   html:String.raw`<p>The line is horizontal, so its slope is $0$ and the acceleration is $0$.</p><p>The region underneath is a rectangle.</p>$$s_2 = 20 \times 12 = 240\ \text{m}$$`},
+  {title:'Stage 3: use the total to find the missing time',
+   html:String.raw`<p>Part (b). The three areas add up to the whole distance $AB$.</p>$$s_3 = 324 - 48 - 240 = 36\ \text{m}$$<p>Stage 3 is a triangle with height $12$ and unknown base $T$.</p>$$\tfrac{1}{2} \times T \times 12 = 36 \quad\Longrightarrow\quad T = 6\ \text{s}$$<p>She brakes for $6\ \text{s}$, so the journey ends at $t = 34\ \text{s}$.</p>`},
+  {title:'Stage 3: the slope gives the deceleration',
+   html:String.raw`<p>Part (c). The line runs from $(28, 12)$ to $(34, 0)$.</p>$$a = \frac{y_2 - y_1}{x_2 - x_1} = \frac{0 - 12}{34 - 28} = -2\ \text{m s}^{-2}$$<p>The slope is negative because she is slowing down. The <b>deceleration</b> is $2\ \text{m s}^{-2}$, stated as a positive number.</p>`},
+  {title:'The rare case: when SUVAT is quicker',
+   html:String.raw`<p>Part (d) asks for a speed at a given <b>distance</b>, not at a given time. The graph has time along the bottom, so it does not give this directly.</p><p>Work inside stage 3 only, from that moment until she stops:</p>$$s = 16,\quad u = ?,\quad v = 0,\quad a = -2$$<p>Time is not involved, so use the equation without $t$:</p>$$v^2 = u^2 + 2as \quad\Longrightarrow\quad 0 = u^2 + 2(-2)(16) \quad\Longrightarrow\quad u = 8\ \text{m s}^{-1}$$`},
+  {title:'Check, then write the answers',
+   html:String.raw`<p>Check with the whole shape, a trapezium with parallel sides $20$ and $34$ and height $12$:</p>$$\tfrac{1}{2}(20 + 34)(12) = 324\ \text{m}$$<p>That matches the distance $AB$.</p><ul><li>(a) $1.5\ \text{m s}^{-2}$, from a slope.</li><li>(b) $6\ \text{s}$, from an area.</li><li>(c) $2\ \text{m s}^{-2}$, from a slope.</li><li>(d) $8\ \text{m s}^{-1}$, from SUVAT.</li></ul><p>The routine: split into stages, sketch, then use slopes and areas. Save SUVAT for what the graph cannot give easily.</p>`}
+];
+stageSlides.forEach(s => { s.draw = stageGraph; });
+const deckStages = makeDeck($('deckStages'), stageSlides, {extraHTML:'<div class="tblwrap"><table class="st" id="stTable"></table></div>', onChange:i => stageTable(i)});
+stageTable(deckStages.i);
+
+/* =====================================================================
+   WINDOW 3: VERTICAL MOTION
+   ===================================================================== */
+const G = 9.8, UMAX = 50;
+let u3 = 14.7, t3 = 0, play3 = false, last3 = null, target3 = 0, hold3 = 0, topped3 = false, hover3 = null, hl = {};
+const T1 = () => u3 / G, TT = () => 2 * u3 / G, HM = () => u3 * u3 / (2 * G), LV = () => 8 * HM() / 9;
+const s3 = x => u3 * x - 0.5 * G * x * x, v3 = x => u3 - G * x;
+const SC = setupCanvas($('sc3'), () => drawSim()), GS3 = setupCanvas($('gs3'), () => drawSim()), GV3 = setupCanvas($('gv3'), () => drawSim());
+
+function drawScene3(C){
+  const ctx = SC.ctx, w = SC.w, h = SC.h; if (!w) return;
+  ctx.clearRect(0, 0, w, h);
+  const H = HM(), top = 40, bottom = h - 40, left = 46, right = w - 14;
+  const step = niceStep(H * 1.15, 6), ymax = Math.ceil(H * 1.15 / step) * step, Y = s => bottom - (s / ymax) * (bottom - top);
+  ctx.font = '11px ' + FONT; ctx.lineWidth = 1;
+  for (let k = 0; k * step <= ymax + 1e-9; k++){ const y = Y(k * step); ctx.strokeStyle = C.grid; seg(ctx, left, y, right, y); ctx.fillStyle = C.muted; ctx.textAlign = 'right'; ctx.fillText(trim(k * step, 2), left - 7, y + 4); }
+  lab(ctx, 's (m)', 8, top - 18, {color:C.text, size:11.5, bold:true});
+  ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5; seg(ctx, left, Y(0), right, Y(0));
+  lab(ctx, 'O, where s = 0', right - 2, Y(0) + 20, {color:C.muted, align:'right', size:12});
+  if (hl.top || t3 >= T1() - 1e-9){ dash(ctx, left, Y(H), right, Y(H), C.primary, 1.25); lab(ctx, 'maximum height', left + 8, Y(H) + 17, {color:C.primary, bold:true, size:12}); }
+  if (hl.level){ dash(ctx, left, Y(LV()), right, Y(LV()), C.ok, 1.5); lab(ctx, trim(LV(), 2) + ' m', left + 8, Y(LV()) + 17, {color:C.ok, bold:true, size:12}); }
+  const cx = left + (right - left) * 0.5, by = Y(s3(t3)), v = v3(t3), len = 60 * v / u3;
+  ctx.globalAlpha = 0.16; ctx.fillStyle = C.primary; ctx.beginPath(); ctx.arc(cx, by, 21, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+  const gr = ctx.createRadialGradient(cx - 4, by - 4, 1, cx, by, 12); gr.addColorStop(0, '#FFFFFF'); gr.addColorStop(0.35, C.primary); gr.addColorStop(1, C.primary);
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, by, 10.5, 0, Math.PI * 2); ctx.fill();
+  const ax = Math.min(cx + 44, right - 44);
+  if (Math.abs(len) > 3){ arrow(ctx, ax, by, ax, by - len, C.accent, 2.5); lab(ctx, 'v', ax + 8, by - len / 2 + 4, {color:C.accent, bold:true, size:13}); }
+  else lab(ctx, 'v = 0', ax - 6, by - 12, {color:C.accent, bold:true, size:13});
+}
+function keys3(which){
+  const T = TT(), a = T1();
+  return which === 's' ? [{t:0, name:'Launch'}, {t:a, name:'Maximum height', tag:'max height', pos:'above'}, {t:T, name:'Back at O', tag:'back at O', pos:'end'}]
+                       : [{t:0, name:'Launch speed'}, {t:a, name:'Momentarily at rest', tag:'v = 0', pos:'below'}, {t:T, name:'Back at O', tag:'v = -u', pos:'end'}];
+}
+function simGraph(o, C, f, ymin, ymax, color, which, sym, unit){
+  const T = TT(), a = T1();
+  const A = axes(o, C, {xmax:T, ymin, ymax, xl:'t (s)', yl:sym + ' (' + unit + ')'}); if (!A) return;
+  const ctx = o.ctx;
+  if (which === 'v' && hl.area){ fillArea(ctx, A, f, 0, a, C.primary, 0.3); if (hl.area === 2) fillArea(ctx, A, f, a, T, C.fourth, 0.3); }
+  if (which === 's' && hl.level){ dash(ctx, A.X(0), A.Y(LV()), A.X(T), A.Y(LV()), C.ok, 1.5); [a * 2 / 3, a * 4 / 3].forEach(x => { dash(ctx, A.X(x), A.Y(LV()), A.X(x), A.Y(0), C.ok, 1.25, [3, 3]); dot(ctx, A.X(x), A.Y(LV()), C.ok, C.panel, 5.5); }); }
+  plot(ctx, A, f, 0, T, color, 2, 0.25); plot(ctx, A, f, 0, t3, color, 2.75, 1);
+  const keys = keys3(which);
+  keys.forEach((k, idx) => {
+    const forced = hl.top && idx === 1;
+    if (k.t > t3 + 1e-9 && !forced) return;
+    const x = A.X(k.t), y = A.Y(f(k.t));
+    ctx.fillStyle = C.panel; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, forced ? 7 : 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    if (!k.tag) return;
+    if (k.pos === 'above') lab(ctx, k.tag, x, y - 11, {color:C.text, bold:true, align:'center', size:12});
+    else if (k.pos === 'below') lab(ctx, k.tag, x + 9, y + 17, {color:C.text, bold:true, size:12});
+    else lab(ctx, k.tag, x - 9, y - 9, {color:C.text, bold:true, align:'right', size:12});
+  });
+  dash(ctx, A.X(t3), A.P.t, A.X(t3), A.h - A.P.b, C.muted, 1, [2, 3]);
+  dot(ctx, A.X(t3), A.Y(f(t3)), color, C.panel, 5);
+  if (hover3 && hover3.t <= T + 1e-9){
+    const x = A.X(hover3.t), val = f(hover3.t), y = A.Y(val);
+    dash(ctx, x, A.P.t, x, A.h - A.P.b, C.text, 1, [3, 3]); dot(ctx, x, y, color, C.panel, 6);
+    const lines = []; if (hover3.ki >= 0) lines.push([keys[hover3.ki].name, true]);
+    lines.push(['t = ' + fmt(hover3.t) + ' s', false]); lines.push([sym + ' = ' + fmt(val) + ' ' + unit, false]);
+    let bw = 0; lines.forEach(l => { ctx.font = (l[1] ? '600 ' : '400 ') + '12.5px ' + FONT; bw = Math.max(bw, ctx.measureText(l[0]).width); });
+    bw += 20; const bh = lines.length * 18 + 12; let bx = x + 14; if (bx + bw > A.w - 4) bx = x - 14 - bw; const byy = Math.max(4, Math.min(A.h - bh - 4, y - bh / 2));
+    ctx.fillStyle = C.panel; ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.rect(bx + 0.5, byy + 0.5, bw, bh); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = color; ctx.fillRect(bx + 0.5, byy + 0.5, 3, bh);
+    lines.forEach((l, i) => { ctx.font = (l[1] ? '600 ' : '400 ') + '12.5px ' + FONT; ctx.fillStyle = C.text; ctx.textAlign = 'left'; ctx.fillText(l[0], bx + 12, byy + 20 + i * 18); });
+  }
+}
+function drawSim(){
+  const C = col(); drawScene3(C);
+  const ss = niceStep(HM() * 1.2, 4), vs = niceStep(2.3 * u3, 4), vm = Math.ceil(1.1 * u3 / vs) * vs;
+  simGraph(GS3, C, s3, 0, Math.ceil(HM() * 1.2 / ss) * ss, C.primary, 's', 's', 'm');
+  simGraph(GV3, C, v3, -vm, vm, C.accent, 'v', 'v', 'm/s');
+  $('r3t').textContent = fmt(t3); $('r3s').textContent = fmt(s3(t3)); $('r3v').textContent = fmt(v3(t3));
+  $('scrub3').value = Math.round(t3 / TT() * 1000);
+}
+function loop3(ts){
+  if (!play3) return;
+  if (last3 === null) last3 = ts;
+  const dt = Math.min((ts - last3) / 1000, 0.05); last3 = ts;
+  if (ts < hold3){ requestAnimationFrame(loop3); return; }
+  const next = t3 + dt, a = T1();
+  if (!topped3 && t3 < a && next >= a && target3 > a + 1e-9){ t3 = a; topped3 = true; hold3 = ts + 1300; }
+  else t3 = next;
+  if (t3 >= target3){ t3 = target3; play3 = false; $('play3').textContent = 'Play whole flight'; }
+  drawSim();
+  if (play3) requestAnimationFrame(loop3);
+}
+function animate3(from, to){ t3 = from; target3 = to; topped3 = from >= T1() - 1e-9; hold3 = 0; last3 = null; play3 = true; $('play3').textContent = 'Pause'; drawSim(); requestAnimationFrame(loop3); }
+function set3(t){ play3 = false; t3 = t; $('play3').textContent = 'Play whole flight'; drawSim(); }
+$('play3').addEventListener('click', () => { if (play3){ play3 = false; $('play3').textContent = 'Play whole flight'; return; } animate3(0, TT()); });
+$('scrub3').addEventListener('input', e => set3(e.target.value / 1000 * TT()));
+[['gs3', GS3], ['gv3', GV3]].forEach(pair => {
+  const c = $(pair[0]), o = pair[1]; c.style.touchAction = 'pan-y'; c.style.cursor = 'crosshair';
+  const mv = e => {
+    if (!o.A) return; const r = c.getBoundingClientRect(), T = TT(), W = o.A.w - o.A.P.l - o.A.P.r;
+    const raw = Math.max(0, Math.min(T, (e.clientX - r.left - o.A.P.l) / W * T)), ks = keys3('s');
+    hover3 = null;
+    for (let i = 0; i < ks.length; i++) if (Math.abs(ks[i].t - raw) / T * W < 10){ hover3 = {t:ks[i].t, ki:i}; break; }
+    if (!hover3){ const st = niceStep(T, 12); hover3 = {t:Math.min(T, Math.round(raw / st) * st), ki:-1}; }
+    drawSim();
+  };
+  c.addEventListener('pointermove', mv); c.addEventListener('pointerdown', mv);
+  c.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse'){ hover3 = null; drawSim(); } });
+});
+document.addEventListener('pointerdown', e => { if (hover3 && e.target.id !== 'gs3' && e.target.id !== 'gv3'){ hover3 = null; drawSim(); } });
+
+const U = () => trim(u3, 2);
+const gravSlides = [
+  {title:'Set up the model',
+   html:() => String.raw`<p>Before any equations, write down the model.</p><ul><li>The ball is a particle and air resistance is ignored.</li><li>Take <b>upwards as positive</b>.</li><li>Gravity pulls down the whole time, so $a = -9.8\ \text{m s}^{-2}$ on the way up, at the top, and on the way down.</li><li>The ball starts with $u = ${U()}\ \text{m s}^{-1}$.</li></ul><p>Press “Play whole flight” to watch the motion with its two graphs.</p>`,
+   enter:() => { hl = {}; set3(0); }},
+  {title:'One motion, three moments',
+   html:() => String.raw`<p>The flight looks like it has stages:</p><ul><li>going up, with $v > 0$ and slowing,</li><li>the top, where $v = 0$ for an instant,</li><li>coming down, with $v < 0$ and speeding up.</li></ul><p>The cyclist needed three stages because her acceleration changed. Here the acceleration <b>never changes</b>: the velocity–time graph is one straight line with slope $-9.8$. So a single set of SUVAT values covers the whole flight.</p>`,
+   enter:() => { hl = {}; animate3(0, TT()); }},
+  {title:'The key fact: at the top, v = 0',
+   html:() => String.raw`<p>The question never states the velocity at the maximum height. You supply it: the ball stops rising at the instant its velocity is zero.</p><p>For the motion from $O$ to the top, list all five quantities:</p>$$s = ?\qquad u = ${U()}\qquad v = 0\qquad a = -9.8\qquad t = ?$$<p>Three are known, so the other two can be found.</p>`,
+   enter:() => { hl = {top:true}; animate3(0, T1()); }},
+  {title:'(a) Time to reach the top',
+   html:() => String.raw`<p>You want $t$ and do not know $s$, so use the equation without $s$.</p>$$v = u + at$$$$0 = ${U()} - 9.8t$$$$t = \frac{${U()}}{9.8} = ${trim(T1())}\ \text{s}$$<p>On the velocity–time graph, this is where the line crosses the time axis.</p>`,
+   enter:() => { hl = {top:true}; set3(T1()); }},
+  {title:'(b) The maximum height',
+   html:() => String.raw`<p>You want $s$. Use the equation without $t$, so the answer does not depend on part (a).</p>$$v^2 = u^2 + 2as$$$$0 = ${U()}^2 + 2(-9.8)s$$$$s = \frac{${U()}^2}{19.6} = ${trim(HM())}\ \text{m}$$<p>Check with the graph. The shaded triangle under the velocity–time line has area</p>$$\tfrac{1}{2} \times ${trim(T1())} \times ${U()} = ${trim(HM())}\ \text{m}$$`,
+   enter:() => { hl = {top:true, area:1}; set3(T1()); }},
+  {title:'(c) Time to return to O',
+   html:() => String.raw`<p>Back at $O$ the displacement is zero. Use the whole flight, with $s = 0$.</p>$$s = ut + \tfrac{1}{2}at^2$$$$0 = ${U()}t - 4.9t^2 = t(${U()} - 4.9t)$$<p>So $t = 0$, which is the launch, or</p>$$t = \frac{${U()}}{4.9} = ${trim(TT())}\ \text{s}$$<p>That is exactly twice the time to the top. The way down takes as long as the way up.</p>`,
+   enter:() => { hl = {top:true}; animate3(T1(), TT()); }},
+  {title:'(d) Velocity on return',
+   html:() => String.raw`$$v = u + at = ${U()} - 9.8(${trim(TT())}) = -${U()}\ \text{m s}^{-1}$$<p>The ball returns with the <b>same speed</b> it started with, in the opposite direction. The minus sign means downwards.</p><p>The graph agrees. The two shaded triangles have equal areas, one above the axis and one below, so the total displacement is zero.</p>`,
+   enter:() => { hl = {top:true, area:2}; set3(TT()); }},
+  {title:'(e) Two times at the same height',
+   html:() => String.raw`<p>Set $s = ${trim(LV())}$ and solve for $t$.</p>$$${trim(LV())} = ${U()}t - 4.9t^2$$$$4.9t^2 - ${U()}t + ${trim(LV())} = 0$$$$t = ${trim(T1() * 2 / 3)}\ \text{s} \quad\text{or}\quad t = ${trim(T1() * 4 / 3)}\ \text{s}$$<p>Both answers are valid. The ball passes this height once on the way up and once on the way down, at equal intervals either side of the top.</p>`,
+   enter:() => { hl = {top:true, level:true}; set3(T1() * 2 / 3); }},
+  {title:'The method in four lines',
+   html:() => String.raw`<ul><li>Choose a positive direction and write $a = -9.8$ or $a = 9.8$ to match it.</li><li>At the maximum height, put $v = 0$.</li><li>When it returns to its starting level, put $s = 0$.</li><li>List $s, u, v, a, t$, then pick the equation that leaves out the quantity you neither know nor want.</li></ul><p>Hover over or tap either graph to read values, and change $u$ in the problem above to try your own numbers.</p>`,
+   enter:() => { hl = {top:true}; set3(0); }}
+];
+const deckGravity = makeDeck($('deckGravity'), gravSlides, {visEl:$('sim')});
+function applyU3(){
+  const raw = $('u3In').value.trim().replace(',', '.'), n = Number(raw);
+  const msg = raw === '' || !isFinite(n) ? 'Enter a number, for example 19.6.' : n <= 0 ? 'The speed must be greater than 0.' : n > UMAX ? 'Use a speed up to ' + UMAX + '.' : '';
+  $('u3Err').textContent = msg; $('u3Wrap').classList.toggle('bad', !!msg); if (msg) return;
+  u3 = n; hover3 = null; play3 = false; t3 = 0; $('pLevel').textContent = trim(LV());
+  deckGravity.go(deckGravity.i);
+}
+$('u3Go').addEventListener('click', applyU3);
+$('u3In').addEventListener('keydown', e => { if (e.key === 'Enter') applyU3(); });
+
+/* ---------- windows (hash routing) ---------- */
+const VIEWS = ['graphs', 'slope', 'area', 'stages', 'gravity'];
+let curView = 'graphs';
+function route(){
+  const name = VIEWS.indexOf(location.hash.slice(1)) >= 0 ? location.hash.slice(1) : 'graphs';
+  VIEWS.forEach(v => { $('v-' + v).hidden = v !== name; });
+  document.querySelectorAll('.tabs a').forEach(a => { if (a.dataset.view === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  stopMotion(); [deckSlope, deckArea, deckStages].forEach(d => d.stop());
+  if (name !== 'gravity' && play3){ play3 = false; $('play3').textContent = 'Play whole flight'; }
+  curView = name;
+}
+window.addEventListener('hashchange', route);
+document.addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea') return;
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  const d = {slope:deckSlope, area:deckArea, stages:deckStages, gravity:deckGravity}[curView]; if (!d) return;
+  d.go(d.i + (e.key === 'ArrowRight' ? 1 : -1));
+});
+function redrawAll(){ _col = null; drawMotion(); deckSlope.redraw(); deckArea.redraw(); deckStages.redraw(); drawSim(); }
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawAll);
+renderTex(document.body);
+route();
+drawSim();
+})();
+
+</script>
+</body>
+</html>
